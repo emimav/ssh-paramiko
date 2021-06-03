@@ -20,6 +20,3 @@ TIMEOUT = 10
 # .pem file details
 PKEY = "" 
 
-# Sample commands to execute
-COMMANDS = ["lsdsadsads -all"]
-
