@@ -1,0 +1,162 @@
+import paramiko
+import os, sys, time
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from conf import ssh_conf as conf_file
+import socket
+
+
+class ClientSSH:
+    """Class to connect to remote server"""
+    
+    def __init__(self):
+        """Initialize required variables"""
+        self.ssh_output = None
+        self.ssh_error = None
+        self.client = None
+        self.host = conf_file.HOST
+        self.username = conf_file.USERNAME
+        self.password = conf_file.PASSWORD
+        self.timeout = float(conf_file.TIMEOUT)
+        self.commands = conf_file.COMMANDS
+        self.pkey = conf_file.PKEY
+        self.port = conf_file.PORT
+        self.upload_remote_filepath = conf_file.UPLOAD_REMOTE_FILEPATH
+        self.upload_local_filepath = conf_file.UPLOAD_LOCAL_FILEPATH
+        self.download_remote_filepath = conf_file.DOWNLOAD_REMOTE_FILEPATH
+        self.download_local_filepath = conf_file.DOWNLOAD_LOCAL_FILEPATH
+
+        def connect(self):
+            """Login to remote servers""" 
+            try:
+                # Paramiko.SSHClient can be used to make connections to the remote server and transfer files
+                print("Establishing an SSH connection")
+                self.client = paramiko.SSHClient()
+                # Parsing an instance of the AutoAddPolicy to set_missing_host_key_policy() changes it to allow any host
+                self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                # Connect to the server 
+                if (self.password == ''):
+                    self.pkey = paramiko.RSAKey.from_private_key_file(self.pkey)
+                    self.client.connect(hostname = self.host, port = self.port, username = self.username, pkey = self.pkey, timeout = self.timeout, allow_agent = False, look_for_keys = False)
+                    print("Connected to the server", self.host)
+
+                else: 
+                    self.client.connect(hostname = self.host, port = self.port, username = self.username, password = self.password, timeout = self.timeout, allow_agent = False, look_for_keys = False) 
+                    print("Connected to the server", self.host)
+
+
+            except paramiko.AuthenticationException:
+                print("Authentication failed, please check your credentials")
+                result_flag = False
+
+            except paramiko.SSHException as sshException:
+                print("COuld not establish SSH connection: %s" % sshException)
+                result_flag = False
+
+            except socket.timeout  as e: 
+                print ("Connection timeout out")
+                result_flag = False
+
+            except Exception, e:
+                print("\nException in connecting to the server")
+                print("PYTHON SAYS:", e)
+                result_flag = False
+                self.client.close()
+
+            else: 
+                result_flag = True
+
+            return result_flag
+
+
+        def execute_commands(self, commands):
+            """Execute a command on the remote host. Return a tuple containing an integer status and two string - the first containing stdout and the second containing stderr from the command. """
+            self.ssh_output = None
+            result_flag = True 
+            try: 
+                if self.connect():
+                    for command in commands: 
+                        print("Executing the following command --> {}".format(command))
+                        stdin, stdout, stderr = self.client.exec_commands(command, timeout = 10)
+                        self.ssh_output = stdout.read()
+                        self.ssh_error = stderr.read()
+                        if self.sssh_error:
+                            print("Problem occurred whle running command: " + command + " The error is " + self.ssh_error)
+                            result_flag = False 
+                        else:
+                            print("Command execution completed succesffully", command)
+                        self.client.close()
+                else: 
+                    print("Could not establish SSH connection")
+                    result_flag = False
+            
+            except socket.timeout as e: 
+                print("Connection Timeout out.", command)
+                self.client.close()
+                result_flag = False
+        
+            except paramiko.SSHException:
+                print("Failed to execute the command!", command)
+                self.client.close()
+                result_flag = False
+            
+            return result_flag
+                
+
+        def upload_file(self, upload_local_filepath, upload_remote_filepath):
+            """This method uploads the file to the server"""
+            result_flag = True
+            try:
+                if self.connect():
+                    ftp_client = self.client.open_sftp()
+                    ftp_client = self.put(upload_local_filepath, upload_remote_filepath)
+                    ftp_client.close()
+                    self.client.close()
+                else:
+                    print("Could not establish SSH connection")
+                    result_flag = False
+            except Exception, e:
+                print("\nUnable to upload the file to the remote server", upload_remote_filepath)
+                print("Python says: ", e)
+                result_flag = False
+                ftp_client.close()
+                self.client.close()
+
+            return result_flag
+
+
+        def download_file(self, download_remote_filepath, download_local_filepath)
+            """This method downloads the file from remote server"""
+            result_flag = True
+            try: 
+                if self.connect():
+                    ftp_client = self.client.open_sftp()
+                    ftp_client.get(download_remote_filepath, download_local_filepath)
+                    ftp_client.close()
+                    self.client.close()
+                else: 
+                    print("Could not establish SSH connection")
+                    result_flag = False 
+            except Exception, e:
+                print("\nUnable to download the file from the remote server", download_remote_filepath)
+                print("Python says: ", e)
+                result_flag = False
+                ftp_client.close()
+                self.client.close()
+
+            return result_flag
+
+
+if __name__ = "__main__":
+    print("Start of %s"%__file__)
+
+    # Initialise SSH object
+    ssh_object = ClientSSH()
+
+    # Sample code to execute commands 
+    if ssh_obj.execute_command(ssh_obj.commands) is True:
+        print("Commands executed succesfully\n")
+    else: 
+        print("Unable to execute commands")
+
+
+        
