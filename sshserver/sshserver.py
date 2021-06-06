@@ -100,7 +100,7 @@ class ParamikoServer(paramiko.ServerInterface):
     def get_banner(self):
         return "Let's test this!!!"
 
-    # Allow users to control the SSH banner timeout
+    # Other functionality Paramiko: Allow users to control the SSH banner timeout
     # Allow client code to access the stored SSH server banner via
     # Transport.get_banner
 
