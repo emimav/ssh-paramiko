@@ -6,17 +6,17 @@ the commands to execute.
 import getpass
 
 # Server credentials needed for SS
-HOST = "192.168.2.22"
+HOST = "127.0.0.1"
 print("You're trying to connect to ", HOST)
 
 USERNAME = input("Hostname? ").strip()
 PASSWORD = getpass.getpass(prompt = "Password? ")
 
-PORT = 22
+PORT = 2222
 
 # Timeout to wait for an authentication response
-TIMEOUT = 10
+TIMEOUT = 60
 
 # .pem file details
-PKEY = "" 
+# PKEY = "" 
 

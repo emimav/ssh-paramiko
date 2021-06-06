@@ -1,12 +1,15 @@
+#!/usr/bin/python3
+
 # sshclient.py for SSH Client in /home/kali/Desktop/sshclient
-# 
+#
 # Made by Emima Vaipan
 # Login  <em.vaipan@tutamail.com>
-# 
+#
 # Started on    Thu Jun 3 10:50:11 2021 Kali
 # Last update   Thu Jun 3 10:50:11 2021 Kali
 #
-#!/usr/bin/env python3
+# Source code:
+# https://github.com/paramiko/paramiko/blob/master/demos/interactive.py
 
 
 """ Connect to a host using the config details in /config/ssh_config.py and execute commands """
@@ -21,9 +24,13 @@ import paramiko
 import termios
 import getpass
 import subprocess
-
+import logging
 
 from conf import ssh_conf as conf_file
+
+logging.basicConfig()
+logging.getLogger("paramiko").setLevel(logging.DEBUG)
+
 
 class ClientSSH:
     """Class to connect to remote server"""
@@ -36,8 +43,6 @@ class ClientSSH:
         self.username = conf_file.USERNAME
         self.password = conf_file.PASSWORD
         self.timeout = float(conf_file.TIMEOUT)
-        self.commands = conf_file.COMMANDS
-        self.pkey = conf_file.PKEY
         self.port = conf_file.PORT
 
     def connect(self):
@@ -47,13 +52,33 @@ class ClientSSH:
             # Paramiko.SSHClient can be used to make connections to the remote
             # server and transfer files
             print("Trying to establish an SSH connection...")
+
+            paramiko.Transport._preferred_key_types = (
+                'ssh-ed25519', 'ssh-rsa')
+            paramiko.Transport._preferred_keys = (
+                'curve25519-sha256@libssh.org',
+                'ssh-ed25519',
+                'ecdsa-sha2-nistp256',
+                'ecdsa-sha2-nistp384',
+                'ecdsa-sha2-nistp521',
+                'ssh-rsa',
+                'ssh-dss')
+            paramiko.Transport._preferred_ciphers = (
+                'aes256-ctr', 'aes192-ctr', 'aes128-ctr')
+            paramiko.Transport._preferred_macs = (
+                'hmac-sha2-512', 'hmac-sha2-256')
+            paramiko.Transport._preferred_kex = (
+                'curve25519-sha256@libssh.org',
+                'diffie-hellman-group-exchange-sha256')
+
             # Create the SSH client
             self.client = paramiko.SSHClient()
             # Parsing an instance of the AutoAddPolicy to
             # set_missing_host_key_policy() changes it to allow any host
             self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             # Connect to the server
-            if (self.password == ''):
+
+            """if (self.password == ''):
                 self.pkey = paramiko.RSAKey.from_private_key_file(self.pkey)
                 self.client.connect(
                     hostname=self.host,
@@ -62,19 +87,17 @@ class ClientSSH:
                     pkey=self.pkey,
                     timeout=self.timeout,
                     allow_agent=False,
-                    look_for_keys=False)
-                print("Connected to the server", self.host)
+                    look_for_keys=False)"""
 
-            else:
-                self.client.connect(
-                    hostname=self.host,
-                    port=self.port,
-                    username=self.username,
-                    password=self.password,
-                    timeout=self.timeout,
-                    allow_agent=False,
-                    look_for_keys=False)
-                print("Connected to the server", self.host)
+            self.client.connect(
+                hostname=self.host,
+                port=self.port,
+                username=self.username,
+                password=self.password,
+                timeout=self.timeout,
+                allow_agent=False,
+                look_for_keys=False)
+            print("Connected to the server", hostname)
 
         except paramiko.AuthenticationException:
             print("Authentication failed, please check your credentials")
@@ -87,7 +110,7 @@ class ClientSSH:
             self.client.close()
 
         except socket.timeout as e:
-            print("Connection timeout out")
+            print("Connection timeout out!")
             connection_flag = False
             self.client.close()
 

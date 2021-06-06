@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 """ SSH Server implementation based on Paramiko module
     Useful resources: http://docs.paramiko.org/en/stable/api/server.html
@@ -13,10 +13,13 @@ import socket
 import threading
 import logging
 
+logging.basicConfig()
+logging.getLogger("paramiko").setLevel(logging.DEBUG)
 
+"""
 # Set up logging to file
 logging.basicConfig(
-    filename="log_file_name.log",
+    filename="log_file.log",
     level=logging.INFO,
     format="[%(asctime)s] {%{pathname)s:%(lineno)d} %(levelname)s - %(message)s",
     datefmt="%H:%M:%S")
@@ -31,6 +34,7 @@ console.setFormatter(formatter)
 logging.getLogger("").addHandler(console)
 
 logger = logging.getLogger(__name__)
+"""
 
 
 class ParamikoServer(paramiko.ServerInterface):
@@ -41,10 +45,9 @@ class ParamikoServer(paramiko.ServerInterface):
 
     """
 
-    def __init__(self, username=None, password=None):
+    def __init__(self, username='kali', password='kali'):
         self.username = username
         self.password = password
-        #
         self.event = threading.Event()
 
     def get_allowed_auths(self, username):
@@ -68,7 +71,7 @@ class ParamikoServer(paramiko.ServerInterface):
     # Check if the  client will be provided with a channel considering the 'kind' of
     # channel they would like to open
     def check_channel_request(self, kind, channel_id):
-        logger.debug("Channel requested: %s %s" % (kind, channel_id))
+        # logger.debug("Channel requested: %s %s" % (kind, channel_id))
         if kind == "session":
             return paramiko.OPEN_SUCCEEDED
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
@@ -109,12 +112,28 @@ class SSHServer:
     :param port: Port to use for the connection
 
     """
+    paramiko.Transport._preferred_key_types = ('ssh-ed25519', 'ssh-rsa')
+    paramiko.Transport._preferred_keys = (
+        'curve25519-sha256@libssh.org',
+        'ssh-ed25519',
+        'ecdsa-sha2-nistp256',
+        'ecdsa-sha2-nistp384',
+        'ecdsa-sha2-nistp521',
+        'ssh-rsa',
+        'ssh-dss')
+    paramiko.Transport._preferred_ciphers = (
+        'aes256-ctr', 'aes192-ctr', 'aes128-ctr')
+    paramiko.Transport._preferred_macs = ('hmac-sha2-512', 'hmac-sha2-256')
+    paramiko.Transport._preferred_kex = (
+        'curve25519-sha256@libssh.org',
+        'diffie-hellman-group-exchange-sha256')
 
     def __init__(self, host, port):
         """ Initialise reader class for connection """
 
         self.host = host
         self.port = port
+        self.banner_timeout = 200
 
     def listen(self):
         try:
@@ -134,51 +153,62 @@ class SSHServer:
         except Exception as e:
             print("[-] Listen/Accept failed: " + str(e))
             sys.exit(1)
-"""
-    def handle_connection(self, client):
-        t = paramiko.Transport(client)
-        server = ParamikoServer()
-
-        # Start the connect negotiation
-        try:
-            t.start_server(server=server)
-        except EOFError:
-            self._dbg(1, "Client disappeared before establishing connection")
-            t.close()
-            client.close()
-            raise
-
-        # Validate that the connection succeeded
-        if not t.is_active():
-            self._dbg(1, "Client negotiation failed")
-            t.close()
-            client.close()
-            return
-
-        # Wait for authentication
-        channel = t.accept(20)
-        
-        if channel is None:
-            self._dbg(1, "Client disappeared before requesting channel.")
-            t.close()
-            # return
-            sys.exit(1)
-        print("[+] Authenticated!")
-
-        channel.settimout(self.timeout)
 
         try:
-            # Wait for shell request
-            server.event.wait(10)
-            if not serve.event.isSet():
-                self._dbg(1, "Client never asked for a shell.")
-            t.close()
+            # Create a new Transport object  SSH session over the client socket
+            transport_sesh = paramiko.Transport(client)
 
-"""
-if __name__ == "__main__":
+            transport_sesh.local_version = "SSH-2.0-HelloStranger"
+            transport_sesh.banner_timeout = self.banner_timeout
+            server = ParamikoServer()
+
+            # Start the SSH session negotiation
+            try:
+                transport_sesh.start_server(server=server)
+            except Exception as e:
+                print("[-] Client disappeared before establishing a connection...")
+                transport_sesh.close()
+                client.close()
+
+            # Validate that the connection succeeded
+            if not transport_sesh.is_active():
+                print("[-] Client negotiation failed...")
+                transport_sesh.close()
+                client.close()
+                # return ends the method
+                # return
+
+            # Wait for authentication
+            channel = transport_sesh.accept(20)
+
+            if channel is None:
+                print("[-] Client disappeared before requesting channel...")
+                transport_sesh.close()
+                client.close()
+                # return
+            else:
+                print("[+] Client authenticated!")
+                channel.settimout(self.timeout)
+
+            try:
+                # Wait for shell request
+                server.event.wait(10)
+                if not server.event.is_set():
+                    print("[-] Client never asked for a shell.")
+                    sys.exit(1)
+            except Exception as e:
+                print("[-] Client disappeared: %s" % e)
+            finally:
+                # Closing tranport closes channel
+                transport_sesh.close()
+                client.close()
+
+        except Exception as e:
+            print("[-] Error: " + str(e))
+
+
+if __name__ == '__main__':
 
     # Initialise SSH object
     ssh_server = SSHServer('127.0.0.1', 2222)
     ssh_server.listen()
-
-
