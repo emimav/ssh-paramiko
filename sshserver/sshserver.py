@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """ SSH Server implementation based on Paramiko module
     Useful resources: http://docs.paramiko.org/en/stable/api/server.html
@@ -9,6 +9,7 @@
 
 import sys
 import paramiko
+
 import socket
 import threading
 import logging
@@ -54,6 +55,8 @@ class ParamikoServer(paramiko.ServerInterface):
         # return "password, publickey"
         return "password"
 
+        
+
     # Check if the client can open channels without further authentication
     def check_auth_none(self, username, password=None):
         if auth_none(self.username):
@@ -93,13 +96,13 @@ class ParamikoServer(paramiko.ServerInterface):
             pixelwidth,
             pixelheight,
             modes):
-        print("PTY requested")
+        print("[+] PTY requested")
         return True
-
+"""
     # Display pre-authentication banner to the user
     def get_banner(self):
         return "Let's test this!!!"
-
+"""
     # Other functionality Paramiko: Allow users to control the SSH banner timeout
     # Allow client code to access the stored SSH server banner via
     # Transport.get_banner
@@ -112,21 +115,6 @@ class SSHServer:
     :param port: Port to use for the connection
 
     """
-    paramiko.Transport._preferred_key_types = ('ssh-ed25519', 'ssh-rsa')
-    paramiko.Transport._preferred_keys = (
-        'curve25519-sha256@libssh.org',
-        'ssh-ed25519',
-        'ecdsa-sha2-nistp256',
-        'ecdsa-sha2-nistp384',
-        'ecdsa-sha2-nistp521',
-        'ssh-rsa',
-        'ssh-dss')
-    paramiko.Transport._preferred_ciphers = (
-        'aes256-ctr', 'aes192-ctr', 'aes128-ctr')
-    paramiko.Transport._preferred_macs = ('hmac-sha2-512', 'hmac-sha2-256')
-    paramiko.Transport._preferred_kex = (
-        'curve25519-sha256@libssh.org',
-        'diffie-hellman-group-exchange-sha256')
 
     def __init__(self, host, port):
         """ Initialise reader class for connection """
@@ -134,8 +122,13 @@ class SSHServer:
         self.host = host
         self.port = port
         self.banner_timeout = 200
+            
 
     def listen(self):
+
+        logging.info("Creating a temporary RSA host key... ")
+        host_key = paramiko.rsakey.RSAKey.generate(1024)
+
         try:
             # Create a socket
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -157,10 +150,14 @@ class SSHServer:
         try:
             # Create a new Transport object  SSH session over the client socket
             transport_sesh = paramiko.Transport(client)
-
             transport_sesh.local_version = "SSH-2.0-HelloStranger"
             transport_sesh.banner_timeout = self.banner_timeout
+            transport_sesh.default_window_size = 2147483647
+            transport_sesh.packetizer.REKEY_BYTES = pow(2, 40)
+            transport_sesh.packetizer.REKEY_PACKETS = pow(2, 40)
+            transport_sesh.add_server_key(host_key)
             server = ParamikoServer()
+
 
             # Start the SSH session negotiation
             try:
@@ -176,7 +173,7 @@ class SSHServer:
                 transport_sesh.close()
                 client.close()
                 # return ends the method
-                # return
+                return
 
             # Wait for authentication
             channel = transport_sesh.accept(20)
@@ -185,10 +182,10 @@ class SSHServer:
                 print("[-] Client disappeared before requesting channel...")
                 transport_sesh.close()
                 client.close()
-                # return
+                return
             else:
                 print("[+] Client authenticated!")
-                channel.settimout(self.timeout)
+                # channel.settimout(self.timeout)
 
             try:
                 # Wait for shell request

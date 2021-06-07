@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # sshclient.py for SSH Client in /home/kali/Desktop/sshclient
 #
@@ -53,29 +53,13 @@ class ClientSSH:
             # server and transfer files
             print("Trying to establish an SSH connection...")
 
-            paramiko.Transport._preferred_key_types = (
-                'ssh-ed25519', 'ssh-rsa')
-            paramiko.Transport._preferred_keys = (
-                'curve25519-sha256@libssh.org',
-                'ssh-ed25519',
-                'ecdsa-sha2-nistp256',
-                'ecdsa-sha2-nistp384',
-                'ecdsa-sha2-nistp521',
-                'ssh-rsa',
-                'ssh-dss')
-            paramiko.Transport._preferred_ciphers = (
-                'aes256-ctr', 'aes192-ctr', 'aes128-ctr')
-            paramiko.Transport._preferred_macs = (
-                'hmac-sha2-512', 'hmac-sha2-256')
-            paramiko.Transport._preferred_kex = (
-                'curve25519-sha256@libssh.org',
-                'diffie-hellman-group-exchange-sha256')
-
             # Create the SSH client
             self.client = paramiko.SSHClient()
             # Parsing an instance of the AutoAddPolicy to
             # set_missing_host_key_policy() changes it to allow any host
+            # Change to MissingHostKeyPolicy
             self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
             # Connect to the server
 
             """if (self.password == ''):
@@ -97,7 +81,7 @@ class ClientSSH:
                 timeout=self.timeout,
                 allow_agent=False,
                 look_for_keys=False)
-            print("Connected to the server", hostname)
+            print("Connected to the server", self.host)
 
         except paramiko.AuthenticationException:
             print("Authentication failed, please check your credentials")
@@ -107,6 +91,7 @@ class ClientSSH:
         except paramiko.SSHException as sshException:
             print("Could not establish SSH connection: %s" % sshException)
             connection_flag = False
+            # pass
             self.client.close()
 
         except socket.timeout as e:
@@ -134,7 +119,7 @@ class ClientSSH:
         self.old_terminal_settings = termios.tcgetattr(self.fd)
 
         # Create a client channel and invoke an ssh shell session with defauly options
-        # p.s. a channel behaves like a socket in paramiko
+        # p.s. a channel behaves like a socket in paramiko       
         self.channel = self.client.invoke_shell()
 
         try:
