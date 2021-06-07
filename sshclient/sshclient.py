@@ -51,7 +51,7 @@ class ClientSSH:
         try:
             # Paramiko.SSHClient can be used to make connections to the remote
             # server and transfer files
-            print("Trying to establish an SSH connection...")
+            print("[+] Trying to establish an SSH connection...")
 
             # Create the SSH client
             self.client = paramiko.SSHClient()
@@ -81,27 +81,27 @@ class ClientSSH:
                 timeout=self.timeout,
                 allow_agent=False,
                 look_for_keys=False)
-            print("Connected to the server", self.host)
+            print("[+] Connected to the server", self.host)
 
         except paramiko.AuthenticationException:
-            print("Authentication failed, please check your credentials")
+            print("[-] Authentication failed, please check your credentials")
             connection_flag = False
             self.client.close()
 
         except paramiko.SSHException as sshException:
-            print("Could not establish SSH connection: %s" % sshException)
+            print("[-] Could not establish SSH connection: %s" % sshException)
             connection_flag = False
             # pass
             self.client.close()
 
         except socket.timeout as e:
-            print("Connection timeout out!")
+            print("[-] Connection timeout out!")
             connection_flag = False
             self.client.close()
 
         except Exception as e:
-            print("\nException in connecting to the server")
-            print("Python says:", e)
+            print("\n [-] Exception in connecting to the server")
+            print("[-] Python says:", e)
             connection_flag = False
             self.client.close()
 
@@ -119,7 +119,7 @@ class ClientSSH:
         self.old_terminal_settings = termios.tcgetattr(self.fd)
 
         # Create a client channel and invoke an ssh shell session with defauly options
-        # p.s. a channel behaves like a socket in paramiko       
+        # p.s. a channel behaves like a socket in paramiko
         self.channel = self.client.invoke_shell()
 
         try:
@@ -181,7 +181,7 @@ class ClientSSH:
                             sys.stdout.flush()
 
                     except socket.timeout:
-                        print("Connection Timeout!")
+                        print("[-] Connection Timeout!")
                         pass
 
                 if sys.stdin in readables and is_alive:
@@ -196,7 +196,7 @@ class ClientSSH:
             self.channel.shutdown(2)
 
         except KeyboardInterrupt:
-            print("\n\nCaught keyboard interrupt. Exiting :(")
+            print("\n\n [-] Caught keyboard interrupt. Exiting :(")
             self.channel.shutdown(2)
             self.client.close()
 
@@ -206,7 +206,7 @@ class ClientSSH:
                 sys.stdin,
                 termios.TCSAFLUSH,
                 self.old_terminal_settings)
-            print('SSH channel closed.')
+            print('[-] SSH channel closed.')
 
 
 if __name__ == "__main__":

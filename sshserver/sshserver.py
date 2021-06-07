@@ -55,9 +55,8 @@ class ParamikoServer(paramiko.ServerInterface):
         # return "password, publickey"
         return "password"
 
-        
-
     # Check if the client can open channels without further authentication
+
     def check_auth_none(self, username, password=None):
         if auth_none(self.username):
             return paramiko.AUTH_SUCCESSFUL
@@ -98,14 +97,16 @@ class ParamikoServer(paramiko.ServerInterface):
             modes):
         print("[+] PTY requested")
         return True
+
+
 """
     # Display pre-authentication banner to the user
     def get_banner(self):
         return "Let's test this!!!"
 """
-    # Other functionality Paramiko: Allow users to control the SSH banner timeout
-    # Allow client code to access the stored SSH server banner via
-    # Transport.get_banner
+# Other functionality Paramiko: Allow users to control the SSH banner timeout
+# Allow client code to access the stored SSH server banner via
+# Transport.get_banner
 
 
 class SSHServer:
@@ -122,11 +123,10 @@ class SSHServer:
         self.host = host
         self.port = port
         self.banner_timeout = 200
-            
 
     def listen(self):
 
-        logging.info("Creating a temporary RSA host key... ")
+        logging.info("[+] Creating a temporary RSA host key... ")
         host_key = paramiko.rsakey.RSAKey.generate(1024)
 
         try:
@@ -157,7 +157,6 @@ class SSHServer:
             transport_sesh.packetizer.REKEY_PACKETS = pow(2, 40)
             transport_sesh.add_server_key(host_key)
             server = ParamikoServer()
-
 
             # Start the SSH session negotiation
             try:
